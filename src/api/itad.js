@@ -4,11 +4,20 @@
 const API_KEY = import.meta.env.VITE_ITAD_API_KEY || '11d51c81db36a0b37ce73b6a8a84592b1458d53c'
 const BASE_URL = 'https://api.isthereanydeal.com'
 
-// CORS proxy for browser requests (ITAD API doesn't support CORS)
-const CORS_PROXY = 'https://corsproxy.io/?'
+// Use our own API route in production, fallback to corsproxy for localhost
+const isProduction = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 
 async function fetchWithCors(url, options = {}) {
-  const proxyUrl = CORS_PROXY + encodeURIComponent(url)
+  let proxyUrl
+  
+  if (isProduction) {
+    // Use our Vercel serverless function
+    proxyUrl = `/api/itad?url=${encodeURIComponent(url)}`
+  } else {
+    // Use corsproxy.io for localhost development
+    proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`
+  }
+  
   const response = await fetch(proxyUrl, options)
   if (!response.ok) {
     const text = await response.text()
