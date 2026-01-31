@@ -8,7 +8,47 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [currentCountry, setCurrentCountry] = useState(getCountry())
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [isInstalled, setIsInstalled] = useState(false)
   const userButtonRef = useRef(null)
+
+  // Capture the install prompt
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+      return
+    }
+
+    const handleBeforeInstall = (e) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true)
+      setInstallPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt) return
+    
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    
+    if (outcome === 'accepted') {
+      setInstallPrompt(null)
+    }
+  }
 
   // Update menu position when opening
   useEffect(() => {
@@ -66,6 +106,20 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Install App Button */}
+            {installPrompt && !isInstalled && (
+              <button
+                onClick={handleInstall}
+                className="flex items-center gap-2 px-3 py-2 bg-primary-500/20 hover:bg-primary-500/30 border border-primary-500/30 rounded-xl transition-all text-sm"
+                title="Install App"
+              >
+                <svg className="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span className="text-primary-400 hidden sm:inline">Install</span>
+              </button>
+            )}
+
             {/* Random Picker Button */}
             <button
               onClick={onOpenRandomPicker}
