@@ -6,7 +6,7 @@
 
 ## About
 
-GameRep helps you manage your gaming backlog the way you want. Search for any PC game, see prices across dozens of stores in your local currency, and organize everything into "To Play" and "Played" lists. Sign in with Google to sync your collection across all your devices.
+GameRep helps you manage your gaming backlog the way you want. Search for any PC game, see best price in your local currency, and organize everything into "To Play" and "Played" lists. Sign in with Google to sync your collection across all your devices.
 
 **Live Demo:** [gamerep.vercel.app](https://gamerep.vercel.app)
 
