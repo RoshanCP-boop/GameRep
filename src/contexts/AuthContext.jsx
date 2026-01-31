@@ -1,0 +1,100 @@
+import { createContext, useContext, useState, useEffect } from 'react'
+import { 
+  signInWithPopup, 
+  signOut as firebaseSignOut, 
+  onAuthStateChanged,
+  browserPopupRedirectResolver
+} from 'firebase/auth'
+import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase'
+
+const AuthContext = createContext(null)
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Check if Firebase is configured
+  const firebaseEnabled = isFirebaseConfigured()
+
+  useEffect(() => {
+    // If Firebase isn't configured, just set loading to false
+    if (!firebaseEnabled || !auth) {
+      setLoading(false)
+      return
+    }
+
+    // Subscribe to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+      setLoading(false)
+    }, (error) => {
+      console.error('Auth state change error:', error)
+      setError(error.message)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [firebaseEnabled])
+
+  const signInWithGoogle = async () => {
+    if (!firebaseEnabled || !auth || !googleProvider) {
+      setError('Firebase is not configured. Please add your Firebase config to .env')
+      return { success: false, error: 'Firebase not configured' }
+    }
+
+    try {
+      setError(null)
+      // Use browserPopupRedirectResolver to ensure popup behavior
+      const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver)
+      return { success: true, user: result.user, isNewUser: result._tokenResponse?.isNewUser }
+    } catch (error) {
+      console.error('Sign in error:', error)
+      // If popup was blocked, the error code will be 'auth/popup-blocked'
+      if (error.code === 'auth/popup-blocked') {
+        setError('Popup was blocked. Please allow popups for this site.')
+      } else {
+        setError(error.message)
+      }
+      return { success: false, error: error.message }
+    }
+  }
+
+  const signOut = async () => {
+    if (!firebaseEnabled || !auth) {
+      return
+    }
+
+    try {
+      await firebaseSignOut(auth)
+      setUser(null)
+    } catch (error) {
+      console.error('Sign out error:', error)
+      setError(error.message)
+    }
+  }
+
+  const value = {
+    user,
+    loading,
+    error,
+    firebaseEnabled,
+    isAuthenticated: !!user,
+    signInWithGoogle,
+    signOut,
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
