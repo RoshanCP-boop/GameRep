@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GameStoreProvider } from './hooks/useGameStore.jsx'
 import Header from './components/Header'
 import SearchBar from './components/SearchBar'
@@ -10,14 +10,17 @@ import GameDetails from './components/GameDetails'
 import FilterBar from './components/FilterBar'
 import StatsPanel from './components/StatsPanel'
 import RandomPickerPanel from './components/RandomPickerPanel'
+import { getCountry, setCountry, COUNTRIES } from './api/itad'
 
 function MainApp() {
+  const { isAuthenticated } = useAuth()
   const [activeTab, setActiveTab] = useState('unplayed')
   const [selectedGame, setSelectedGame] = useState(null)
   const [searchResults, setSearchResults] = useState(null)
   const [showStats, setShowStats] = useState(false)
   const [showRandomPicker, setShowRandomPicker] = useState(false)
   const [collectionSearch, setCollectionSearch] = useState('')
+  const [currentCountry, setCurrentCountry] = useState(getCountry())
   const [viewModes, setViewModes] = useState({ unplayed: 'grid', played: 'grid' }) // per-tab view modes
   
   // Get current view mode for active tab
@@ -152,9 +155,9 @@ function MainApp() {
             <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
             
             {/* Filter Bar with Collection Search and View Mode */}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="mt-3 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
               {/* Collection Search */}
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <div className="relative flex-1 min-w-[150px] sm:min-w-[200px] sm:max-w-sm">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -177,10 +180,12 @@ function MainApp() {
                 )}
               </div>
               
-              <FilterBar filters={filters} onFiltersChange={setFilters} />
-              
-              {/* View Mode Toggle */}
-              <div className="flex gap-1 bg-dark-900/50 p-1 rounded-xl ml-auto">
+              {/* Filters row - all on one line on mobile */}
+              <div className="flex items-center gap-2 flex-wrap w-full sm:flex-1">
+                <FilterBar filters={filters} onFiltersChange={setFilters} />
+                
+                {/* View Mode Toggle */}
+                <div className="flex gap-1 bg-dark-900/50 p-1 rounded-xl sm:ml-auto">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-dark-800 text-dark-100' : 'text-dark-500 hover:text-dark-300'}`}
@@ -208,6 +213,31 @@ function MainApp() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
+                </div>
+              
+                {/* Region selector for mobile/tablet - only for non-authenticated users, hidden on xl+ where header shows it */}
+                {!isAuthenticated && (
+                  <div className="xl:hidden flex items-center gap-1.5 bg-dark-800 border border-dark-700 px-2 py-1.5 rounded-xl">
+                    <svg className="w-3.5 h-3.5 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <select
+                      value={currentCountry}
+                      onChange={(e) => {
+                        setCountry(e.target.value)
+                        setCurrentCountry(e.target.value)
+                        window.location.reload()
+                      }}
+                      className="bg-transparent text-xs text-white focus:outline-none cursor-pointer"
+                    >
+                      {Object.entries(COUNTRIES).map(([code, info]) => (
+                        <option key={code} value={code} className="bg-dark-900">
+                          {info.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
             
