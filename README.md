@@ -140,5 +140,3 @@ npm run build
 MIT
 
 ---
-
-Built with ❤️ by [RoshanCP](https://github.com/RoshanCP-boop)
