@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
+  <!-- Dark background that fills entire icon -->
+  <rect width="192" height="192" fill="#0a0a0a"/>
+  
+  <defs>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Game controller body - centered and scaled (3x the original) -->
+  <g transform="translate(30, 54)">
+    <rect x="0" y="0" width="132" height="72" rx="36" fill="url(#bodyGrad)"/>
+    
+    <!-- D-pad - proper cross like logo (3x scale: 4->12, 12->36) -->
+    <rect x="24" y="18" width="12" height="36" rx="3" fill="white"/>
+    <rect x="12" y="30" width="36" height="12" rx="3" fill="white"/>
+    
+    <!-- Action buttons - same size/spacing as before -->
+    <circle cx="96" cy="21" r="7.5" fill="#eab308"/>
+    <circle cx="111" cy="36" r="7.5" fill="#ef4444"/>
+    <circle cx="96" cy="51" r="7.5" fill="#22c55e"/>
+    <circle cx="81" cy="36" r="7.5" fill="#3b82f6"/>
+  </g>
+  
+  <!-- Small catalog/list lines at bottom (centered, 3x scale) -->
+  <rect x="66" y="144" width="60" height="6" rx="3" fill="#3b82f6"/>
+  <rect x="75" y="156" width="42" height="6" rx="3" fill="#3b82f6" opacity="0.6"/>
+</svg>
