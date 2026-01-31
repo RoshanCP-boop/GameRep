@@ -18,11 +18,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(decodeURIComponent(url))
+    const targetUrl = decodeURIComponent(url)
+    
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'GameRep/1.0'
+      }
+    })
     
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('ITAD API Error:', response.status, errorText)
       return res.status(response.status).json({ 
-        error: `ITAD API Error: ${response.status}` 
+        error: `ITAD API Error: ${response.status}`,
+        details: errorText
       })
     }
 
