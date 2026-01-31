@@ -10,7 +10,7 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['logo.svg', 'icon-192.svg', 'icon-512.svg'],
       manifest: {
-        name: 'GameRep - Your Personal Game Catalog',
+        name: 'GameRep - Your Personal Games Repository',
         short_name: 'GameRep',
         description: 'Track and manage your game collection across all devices',
         theme_color: '#050505',
