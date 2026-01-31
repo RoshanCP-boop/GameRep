@@ -1,11 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/itad-api/:path*",
+      "destination": "https://api.isthereanydeal.com/:path*"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!itad-api/).*)",
       "destination": "/index.html"
     }
   ]

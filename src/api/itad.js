@@ -4,12 +4,22 @@
 const API_KEY = import.meta.env.VITE_ITAD_API_KEY || '11d51c81db36a0b37ce73b6a8a84592b1458d53c'
 const BASE_URL = 'https://api.isthereanydeal.com'
 
-// Use allorigins proxy which works in production
+// Check if running in production (Vercel)
+const isProduction = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
+
 async function fetchWithCors(url, options = {}) {
-  // allorigins.win is a free CORS proxy that works in production
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+  let fetchUrl = url
   
-  const response = await fetch(proxyUrl, options)
+  if (isProduction) {
+    // In production, use Vercel rewrites to proxy through our domain
+    // Replace the ITAD API base URL with our proxy path
+    fetchUrl = url.replace('https://api.isthereanydeal.com', '/itad-api')
+  } else {
+    // In development, use corsproxy.io
+    fetchUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`
+  }
+  
+  const response = await fetch(fetchUrl, options)
   if (!response.ok) {
     const text = await response.text()
     throw new Error(`API Error: ${response.status} - ${text}`)
