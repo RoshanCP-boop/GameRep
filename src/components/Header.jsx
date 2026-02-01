@@ -144,8 +144,8 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
             </button>
 
             
-            {/* Region Selector - hidden until xl screens */}
-            <div className="relative hidden xl:block">
+            {/* Region Selector - shown on md screens and up */}
+            <div className="relative hidden md:block">
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center gap-2 px-3 py-2 bg-dark-800 hover:bg-dark-700 border border-dark-700 hover:border-dark-600 rounded-xl transition-all text-sm"
@@ -229,8 +229,8 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
                             </p>
                           </div>
                           
-                          {/* Region selector in dropdown */}
-                          <div className="px-4 py-3 border-b border-white/10">
+                          {/* Region selector in dropdown - only show on mobile */}
+                          <div className="px-4 py-3 border-b border-white/10 md:hidden">
                             <p className="text-xs text-dark-400 mb-2">Region</p>
                             <select
                               value={currentCountry}
