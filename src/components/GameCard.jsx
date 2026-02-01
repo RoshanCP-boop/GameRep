@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useGameStore } from '../hooks/useGameStore.jsx'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { formatPrice } from '../api/itad'
+import { formatPrice, getFullGameInfo } from '../api/itad'
 
 export default function GameCard({ game, onSelect, isSearchResult = false, isDraggable = false }) {
   const { addGame, toggleGameStatus, isGameInCollection, getGame } = useGameStore()
   const [showSuccess, setShowSuccess] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
   
   const inCollection = isGameInCollection(game.id)
   const storedGame = inCollection ? getGame(game.id) : null
@@ -30,9 +31,54 @@ export default function GameCard({ game, onSelect, isSearchResult = false, isDra
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const handleAddToCollection = (e) => {
+  const handleAddToCollection = async (e) => {
     e.stopPropagation()
-    addGame(game)
+    if (inCollection || isAdding) return
+    
+    setIsAdding(true)
+    try {
+      // Try to fetch full game details, but don't let it block adding
+      let gameToAdd = { ...game }
+      
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        )
+        const fullDetails = await Promise.race([
+          getFullGameInfo(game.id),
+          timeoutPromise
+        ])
+        
+        // Only add extra fields if we got them
+        if (fullDetails) {
+          gameToAdd = {
+            ...game,
+            metacritic: fullDetails.metacritic ?? game.metacritic,
+            steamRating: fullDetails.steamRating ?? game.steamRating,
+            developers: fullDetails.developers || game.developers,
+            publishers: fullDetails.publishers || game.publishers,
+            releaseDate: fullDetails.releaseDate || game.releaseDate,
+            tags: fullDetails.tags || game.tags,
+            reviews: fullDetails.reviews || game.reviews,
+            deals: fullDetails.deals,
+            historyLow: fullDetails.historyLow,
+            urls: fullDetails.urls,
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch full details:', fetchErr)
+        // Continue with basic game data
+      }
+      
+      // Always add the game
+      addGame(gameToAdd)
+    } catch (err) {
+      console.error('Failed to add game:', err)
+      // Last resort fallback
+      addGame(game)
+    } finally {
+      setIsAdding(false)
+    }
   }
 
   const handleToggleStatus = (e) => {
@@ -160,19 +206,26 @@ export default function GameCard({ game, onSelect, isSearchResult = false, isDra
         {isSearchResult && (
           <button
             onClick={handleAddToCollection}
-            disabled={inCollection}
+            disabled={inCollection || isAdding}
             className={`
               absolute bottom-2 right-2 p-2 rounded-full transition-all
               ${inCollection 
                 ? 'bg-green-600 text-white cursor-default' 
-                : 'bg-primary-600 hover:bg-primary-500 text-white opacity-0 group-hover:opacity-100'
+                : isAdding
+                  ? 'bg-primary-600/50 text-white cursor-wait'
+                  : 'bg-primary-600 hover:bg-primary-500 text-white opacity-0 group-hover:opacity-100'
               }
             `}
-            title={inCollection ? 'In collection' : 'Add to collection'}
+            title={inCollection ? 'In collection' : isAdding ? 'Adding...' : 'Add to collection'}
           >
             {inCollection ? (
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            ) : isAdding ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -61,19 +61,22 @@ function MainApp() {
   // Listen for browser back button
   useEffect(() => {
     const handlePopState = (e) => {
-      // If modal is open, close it
-      if (selectedGame) {
+      const state = e.state
+      
+      // If going back to search view, just close the modal
+      if (state?.view === 'search') {
         setSelectedGame(null)
-      } 
-      // If search results are showing, clear them
-      else if (searchResults) {
+      }
+      // If going back to home (no state), close modal and clear search
+      else {
+        setSelectedGame(null)
         setSearchResults(null)
       }
     }
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [selectedGame, searchResults])
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -130,9 +133,20 @@ function MainApp() {
         {searchResults ? (
           <div className="mt-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-dark-100">
-                Search Results ({searchResults.length})
-              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.history.back()}
+                  className="p-2 hover:bg-dark-800 rounded-lg transition-colors"
+                  title="Back to collection"
+                >
+                  <svg className="w-5 h-5 text-dark-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </button>
+                <h2 className="text-xl font-semibold text-dark-100">
+                  Search Results ({searchResults.length})
+                </h2>
+              </div>
               <button 
                 onClick={() => {
                   handleClearSearch()
@@ -256,7 +270,7 @@ function MainApp() {
         <GameDetails 
           game={selectedGame} 
           onClose={() => {
-            setSelectedGame(null)
+            // Just go back - popstate handler will clear selectedGame
             window.history.back()
           }}
         />

@@ -12,15 +12,44 @@ export default function SearchBar({ onResults, onSelectGame, onClearSearch, isSe
     
     setAddingGameId(game.id)
     try {
-      // Fetch full game details to get metacritic, steamRating, etc.
-      const fullDetails = await getFullGameInfo(game.id)
-      addGame({
-        ...game,
-        ...fullDetails,
-      })
+      // Try to fetch full game details, but don't let it block adding
+      let gameToAdd = { ...game }
+      
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        )
+        const fullDetails = await Promise.race([
+          getFullGameInfo(game.id),
+          timeoutPromise
+        ])
+        
+        // Only add extra fields if we got them
+        if (fullDetails) {
+          gameToAdd = {
+            ...game,
+            metacritic: fullDetails.metacritic ?? game.metacritic,
+            steamRating: fullDetails.steamRating ?? game.steamRating,
+            developers: fullDetails.developers || game.developers,
+            publishers: fullDetails.publishers || game.publishers,
+            releaseDate: fullDetails.releaseDate || game.releaseDate,
+            tags: fullDetails.tags || game.tags,
+            reviews: fullDetails.reviews || game.reviews,
+            deals: fullDetails.deals,
+            historyLow: fullDetails.historyLow,
+            urls: fullDetails.urls,
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch full details:', fetchErr)
+        // Continue with basic game data
+      }
+      
+      // Always add the game
+      addGame(gameToAdd)
     } catch (err) {
-      // Fallback to basic game data if fetch fails
-      console.warn('Could not fetch full details, adding basic info:', err)
+      console.error('Failed to add game:', err)
+      // Last resort fallback
       addGame(game)
     } finally {
       setAddingGameId(null)

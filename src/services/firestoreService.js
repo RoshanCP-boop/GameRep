@@ -20,28 +20,62 @@ const getGamesCollection = (userId) => {
 }
 
 /**
+ * Sanitize game ID for use as Firestore document ID
+ * Firestore doc IDs cannot contain forward slashes
+ */
+const sanitizeGameId = (gameId) => {
+  if (!gameId) return null
+  // Replace forward slashes with double underscores
+  return String(gameId).replace(/\//g, '__')
+}
+
+/**
  * Get a single game document reference
  */
 const getGameDoc = (userId, gameId) => {
   if (!db) return null
-  return doc(db, 'users', userId, 'games', gameId)
+  const sanitizedId = sanitizeGameId(gameId)
+  if (!sanitizedId) return null
+  return doc(db, 'users', userId, 'games', sanitizedId)
 }
 
 /**
  * Sync a single game to Firestore
  */
+/**
+ * Remove undefined values from an object (Firestore doesn't accept undefined)
+ */
+const cleanUndefinedValues = (obj) => {
+  const cleaned = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      // Recursively clean nested objects (but not arrays)
+      if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        cleaned[key] = cleanUndefinedValues(value)
+      } else {
+        cleaned[key] = value
+      }
+    }
+  }
+  return cleaned
+}
+
 export const syncGameToFirestore = async (userId, game) => {
   if (!isFirebaseConfigured() || !db) {
-    console.warn('Firebase not configured, skipping sync')
     return
   }
 
   try {
     const gameRef = getGameDoc(userId, game.id)
-    if (!gameRef) return
+    if (!gameRef) {
+      throw new Error('Invalid game ID: ' + game.id)
+    }
+
+    // Clean undefined values - Firestore doesn't accept them
+    const cleanedGame = cleanUndefinedValues(game)
 
     await setDoc(gameRef, {
-      ...game,
+      ...cleanedGame,
       updatedAt: serverTimestamp()
     }, { merge: true })
   } catch (error) {
@@ -89,10 +123,14 @@ export const subscribeToGames = (userId, callback) => {
 
   const unsubscribe = onSnapshot(q, 
     (snapshot) => {
-      const games = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      }))
+      const games = snapshot.docs.map(doc => {
+        const data = doc.data()
+        // Use the original game ID from the data, not the sanitized doc.id
+        return {
+          ...data,
+          id: data.id || doc.id
+        }
+      })
       callback(games)
     },
     (error) => {

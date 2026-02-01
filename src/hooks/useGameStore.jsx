@@ -57,7 +57,7 @@ export function GameStoreProvider({ children }) {
   }, [isAuthenticated, user?.uid])
 
   // Add a game to the collection
-  const addGame = useCallback((game) => {
+  const addGame = useCallback(async (game) => {
     const newGame = {
       ...game,
       status: 'unplayed',
@@ -75,7 +75,11 @@ export function GameStoreProvider({ children }) {
 
     if (isAuthenticated && user?.uid) {
       // For authenticated users, sync to Firestore (real-time listener will update local state)
-      syncGameToFirestore(user.uid, newGame)
+      try {
+        await syncGameToFirestore(user.uid, newGame)
+      } catch (error) {
+        console.error('Failed to sync to Firestore:', error)
+      }
     } else {
       // For guests, update localStorage
       setLocalGames(prev => [...prev, newGame])
