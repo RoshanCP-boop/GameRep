@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserGames, getUserDisplayName, getUserIdByUsername } from '../services/firestoreService'
+import { sortGames } from '../utils/sorting'
 import GameCard from './GameCard'
 import GameCardList from './GameCardList'
 import GameDetails from './GameDetails'
@@ -14,6 +15,8 @@ export default function SharedProfile() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [activeTab, setActiveTab] = useState('unplayed')
   const [viewMode, setViewMode] = useState('grid')
+  const [sortBy, setSortBy] = useState('customOrder')
+  const [sortOrder, setSortOrder] = useState('asc')
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -57,8 +60,12 @@ export default function SharedProfile() {
     }
   }, [userIdOrUsername])
 
-  const filteredGames = games.filter(g => 
-    activeTab === 'played' ? g.status === 'played' : g.status !== 'played'
+  const filteredGames = sortGames(
+    games.filter(g => 
+      activeTab === 'played' ? g.status === 'played' : g.status !== 'played'
+    ),
+    sortBy,
+    sortOrder
   )
 
   const playedCount = games.filter(g => g.status === 'played').length
@@ -139,8 +146,8 @@ export default function SharedProfile() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-4 mb-6">
+        {/* Tabs and Controls */}
+        <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex gap-1 bg-dark-900 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('unplayed')}
@@ -161,6 +168,31 @@ export default function SharedProfile() {
               }`}
             >
               Played ({playedCount})
+            </button>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-dark-800 border border-dark-700 text-dark-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-primary-500"
+            >
+              <option value="customOrder">Custom Order</option>
+              <option value="name">Name</option>
+              <option value="priority">Priority</option>
+              <option value="metacritic">Metacritic</option>
+              <option value="rating">Rating</option>
+              <option value="addedAt">Date Added</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="p-2 bg-dark-800 hover:bg-dark-700 border border-dark-700 rounded-lg transition-colors"
+              title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              <svg className={`w-4 h-4 text-dark-300 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
             </button>
           </div>
 
