@@ -30,13 +30,24 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       
-      // Fetch username if user is logged in
+      // Fetch or create username if user is logged in
       if (user) {
         try {
           const profile = await getUserProfile(user.uid)
-          setUsername(profile?.username || null)
+          
+          // If user doesn't have a username yet, create one
+          if (!profile?.username) {
+            const newUsername = await saveUserProfile(user.uid, {
+              displayName: user.displayName,
+              email: user.email,
+              photoURL: user.photoURL,
+            })
+            setUsername(newUsername)
+          } else {
+            setUsername(profile.username)
+          }
         } catch (err) {
-          console.error('Error fetching username:', err)
+          console.error('Error fetching/creating username:', err)
         }
       } else {
         setUsername(null)
