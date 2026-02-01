@@ -188,19 +188,6 @@ export default function GameDetails({ game, onClose }) {
                 </div>
               )}
               
-              {/* Historical Low */}
-              {details?.historyLow && (
-                <div className="p-4 bg-dark-800 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="text-xs text-dark-500 uppercase tracking-wide">Historical Lowest Price</p>
-                      <p className="text-2xl font-bold text-green-400">
-                        {formatPrice(details.historyLow.amount, details.historyLow.currency)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
               
               {/* Cheapest store option */}
               {(() => {
