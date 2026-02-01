@@ -21,6 +21,7 @@ export default function FriendsPage() {
   const [allUsers, setAllUsers] = useState([]) // Preloaded users for instant search
   const [searchResults, setSearchResults] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
   const [dataLoading, setDataLoading] = useState(true)
   const [error, setError] = useState(null)
   const usersLoaded = allUsers.length > 0
@@ -55,6 +56,7 @@ export default function FriendsPage() {
     ).slice(0, 10)
     
     setSearchResults(filtered)
+    setSelectedIndex(-1)
     setShowDropdown(true)
   }, [searchQuery, allUsers])
   
@@ -103,7 +105,30 @@ export default function FriendsPage() {
   const handleSelectUser = (username) => {
     setShowDropdown(false)
     setSearchQuery('')
+    setSelectedIndex(-1)
     navigate(`/u/${username}`)
+  }
+  
+  const handleKeyDown = (e) => {
+    if (!showDropdown || searchResults.length === 0) return
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex(prev => 
+        prev < searchResults.length - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(prev => 
+        prev > 0 ? prev - 1 : searchResults.length - 1
+      )
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault()
+      handleSelectUser(searchResults[selectedIndex].username)
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
+      setSelectedIndex(-1)
+    }
   }
 
   const handleAccept = async (followerId) => {
@@ -201,6 +226,7 @@ export default function FriendsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                onKeyDown={handleKeyDown}
                 placeholder="Search by username..."
                 className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-10 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 transition-colors"
               />
@@ -233,11 +259,13 @@ export default function FriendsPage() {
                     No users found matching "{searchQuery}"
                   </div>
                 ) : (
-                  searchResults.map(u => (
+                  searchResults.map((u, index) => (
                     <button
                       key={u.userId}
                       onClick={() => handleSelectUser(u.username)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-dark-700 transition-colors text-left"
+                      className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
+                        index === selectedIndex ? 'bg-dark-700' : 'hover:bg-dark-700'
+                      }`}
                     >
                       <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold shrink-0">
                         {(u.displayName || u.username || 'U')[0].toUpperCase()}
