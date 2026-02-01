@@ -291,9 +291,14 @@ export const saveUserProfile = async (userId, profileData) => {
     // Create username from display name
     const username = createUsername(profileData.displayName)
     
+    // Get existing profile to check if isPublic is already set
+    const existingProfile = await getUserProfile(userId)
+    
     await setDoc(userRef, {
       ...cleanUndefinedValues(profileData),
       username,
+      // Default to public if not already set
+      isPublic: existingProfile?.isPublic ?? profileData.isPublic ?? true,
       updatedAt: serverTimestamp()
     }, { merge: true })
     
@@ -301,6 +306,242 @@ export const saveUserProfile = async (userId, profileData) => {
   } catch (error) {
     console.error('Error saving user profile:', error)
     throw error
+  }
+}
+
+/**
+ * Update user's privacy setting
+ */
+export const updateUserPrivacy = async (userId, isPublic) => {
+  if (!isFirebaseConfigured() || !db) {
+    return
+  }
+
+  try {
+    const userRef = doc(db, 'users', userId)
+    await setDoc(userRef, {
+      isPublic,
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+  } catch (error) {
+    console.error('Error updating privacy:', error)
+    throw error
+  }
+}
+
+/**
+ * Follow a user
+ */
+export const followUser = async (followerId, targetUserId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return { success: false }
+  }
+
+  try {
+    // Check if target user is public or private
+    const targetProfile = await getUserProfile(targetUserId)
+    const status = targetProfile?.isPublic ? 'accepted' : 'pending'
+    
+    // Add to target user's followers
+    const followerRef = doc(db, 'users', targetUserId, 'followers', followerId)
+    await setDoc(followerRef, {
+      status,
+      followedAt: serverTimestamp()
+    })
+    
+    // Add to follower's following list
+    const followingRef = doc(db, 'users', followerId, 'following', targetUserId)
+    await setDoc(followingRef, {
+      status,
+      followedAt: serverTimestamp()
+    })
+    
+    return { success: true, status }
+  } catch (error) {
+    console.error('Error following user:', error)
+    throw error
+  }
+}
+
+/**
+ * Unfollow a user
+ */
+export const unfollowUser = async (followerId, targetUserId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return
+  }
+
+  try {
+    const followerRef = doc(db, 'users', targetUserId, 'followers', followerId)
+    const followingRef = doc(db, 'users', followerId, 'following', targetUserId)
+    
+    await deleteDoc(followerRef)
+    await deleteDoc(followingRef)
+  } catch (error) {
+    console.error('Error unfollowing user:', error)
+    throw error
+  }
+}
+
+/**
+ * Accept a follow request
+ */
+export const acceptFollowRequest = async (userId, followerId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return
+  }
+
+  try {
+    const followerRef = doc(db, 'users', userId, 'followers', followerId)
+    const followingRef = doc(db, 'users', followerId, 'following', userId)
+    
+    await setDoc(followerRef, { status: 'accepted' }, { merge: true })
+    await setDoc(followingRef, { status: 'accepted' }, { merge: true })
+  } catch (error) {
+    console.error('Error accepting follow request:', error)
+    throw error
+  }
+}
+
+/**
+ * Decline/remove a follow request
+ */
+export const declineFollowRequest = async (userId, followerId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return
+  }
+
+  try {
+    const followerRef = doc(db, 'users', userId, 'followers', followerId)
+    const followingRef = doc(db, 'users', followerId, 'following', userId)
+    
+    await deleteDoc(followerRef)
+    await deleteDoc(followingRef)
+  } catch (error) {
+    console.error('Error declining follow request:', error)
+    throw error
+  }
+}
+
+/**
+ * Check if user is following another user
+ */
+export const getFollowStatus = async (followerId, targetUserId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return null
+  }
+
+  try {
+    const followingRef = doc(db, 'users', followerId, 'following', targetUserId)
+    const followDoc = await getDoc(followingRef)
+    
+    if (followDoc.exists()) {
+      return followDoc.data().status // 'pending' or 'accepted'
+    }
+    return null // not following
+  } catch (error) {
+    console.error('Error checking follow status:', error)
+    return null
+  }
+}
+
+/**
+ * Get user's followers
+ */
+export const getUserFollowers = async (userId, status = null) => {
+  if (!isFirebaseConfigured() || !db) {
+    return []
+  }
+
+  try {
+    const followersRef = collection(db, 'users', userId, 'followers')
+    const snapshot = await getDocs(followersRef)
+    
+    const followers = await Promise.all(
+      snapshot.docs
+        .filter(doc => !status || doc.data().status === status)
+        .map(async (doc) => {
+          const profile = await getUserProfile(doc.id)
+          return {
+            userId: doc.id,
+            ...doc.data(),
+            displayName: profile?.displayName,
+            username: profile?.username,
+            photoURL: profile?.photoURL
+          }
+        })
+    )
+    
+    return followers
+  } catch (error) {
+    console.error('Error getting followers:', error)
+    return []
+  }
+}
+
+/**
+ * Get users that user is following
+ */
+export const getUserFollowing = async (userId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return []
+  }
+
+  try {
+    const followingRef = collection(db, 'users', userId, 'following')
+    const snapshot = await getDocs(followingRef)
+    
+    const following = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const profile = await getUserProfile(doc.id)
+        return {
+          userId: doc.id,
+          ...doc.data(),
+          displayName: profile?.displayName,
+          username: profile?.username,
+          photoURL: profile?.photoURL
+        }
+      })
+    )
+    
+    return following
+  } catch (error) {
+    console.error('Error getting following:', error)
+    return []
+  }
+}
+
+/**
+ * Search for public users by username
+ */
+export const searchUsers = async (searchQuery, limit = 10) => {
+  if (!isFirebaseConfigured() || !db || !searchQuery.trim()) {
+    return []
+  }
+
+  try {
+    const { query: firestoreQuery, where, collection: firestoreCollection, limit: firestoreLimit } = await import('firebase/firestore')
+    const usersRef = firestoreCollection(db, 'users')
+    
+    // Search for public users whose username starts with the query
+    const searchLower = searchQuery.toLowerCase()
+    const q = firestoreQuery(
+      usersRef, 
+      where('isPublic', '==', true),
+      where('username', '>=', searchLower),
+      where('username', '<=', searchLower + '\uf8ff'),
+      firestoreLimit(limit)
+    )
+    
+    const snapshot = await getDocs(q)
+    
+    return snapshot.docs.map(doc => ({
+      userId: doc.id,
+      ...doc.data()
+    }))
+  } catch (error) {
+    console.error('Error searching users:', error)
+    return []
   }
 }
 

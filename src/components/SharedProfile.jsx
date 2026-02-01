@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getUserGames, getUserDisplayName, getUserIdByUsername } from '../services/firestoreService'
+import { 
+  getUserGames, 
+  getUserDisplayName, 
+  getUserIdByUsername, 
+  getUserProfile,
+  getFollowStatus,
+  followUser,
+  unfollowUser
+} from '../services/firestoreService'
 import { sortGames } from '../utils/sorting'
 import { useAuth } from '../contexts/AuthContext'
 import GameCard from './GameCard'
@@ -9,20 +17,28 @@ import GameDetails from './GameDetails'
 
 export default function SharedProfile() {
   const { userId: userIdOrUsername } = useParams()
-  const { isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const [profileUserId, setProfileUserId] = useState(null)
   const [games, setGames] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [displayName, setDisplayName] = useState(null)
+  const [profileData, setProfileData] = useState(null)
+  const [followStatus, setFollowStatus] = useState(null) // null, 'pending', 'accepted'
+  const [canViewCollection, setCanViewCollection] = useState(false)
   const [selectedGame, setSelectedGame] = useState(null)
   const [activeTab, setActiveTab] = useState('unplayed')
   const [viewModes, setViewModes] = useState({ unplayed: 'grid', played: 'grid' })
   const [sortBy, setSortBy] = useState('priority')
   const [sortOrder, setSortOrder] = useState('desc')
+  const [followLoading, setFollowLoading] = useState(false)
   
   // Get current view mode for active tab
   const viewMode = viewModes[activeTab] || 'grid'
   const setViewMode = (mode) => setViewModes(prev => ({ ...prev, [activeTab]: mode }))
+  
+  // Check if viewing own profile
+  const isOwnProfile = user && profileUserId === user.uid
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -31,11 +47,7 @@ export default function SharedProfile() {
         setError(null)
         
         // Determine if this is a username or userId
-        // Firebase UIDs are typically 28 characters of alphanumeric
-        // Usernames are lowercase with hyphens
         let actualUserId = userIdOrUsername
-        
-        // If it doesn't look like a Firebase UID, try to look it up as a username
         const looksLikeUsername = /^[a-z0-9-]+$/.test(userIdOrUsername) && userIdOrUsername.length < 28
         
         if (looksLikeUsername) {
@@ -43,19 +55,38 @@ export default function SharedProfile() {
           if (foundUserId) {
             actualUserId = foundUserId
           }
-          // If not found as username, still try as userId (fallback)
         }
         
-        const [userGames, userName] = await Promise.all([
-          getUserGames(actualUserId),
-          getUserDisplayName(actualUserId)
-        ])
+        setProfileUserId(actualUserId)
         
-        setGames(userGames)
-        setDisplayName(userName)
+        // Get profile data first to check privacy
+        const profile = await getUserProfile(actualUserId)
+        setProfileData(profile)
+        setDisplayName(profile?.displayName || null)
+        
+        // Check follow status if logged in
+        let currentFollowStatus = null
+        if (user && user.uid !== actualUserId) {
+          currentFollowStatus = await getFollowStatus(user.uid, actualUserId)
+          setFollowStatus(currentFollowStatus)
+        }
+        
+        // Determine if viewer can see the collection
+        const isOwner = user?.uid === actualUserId
+        const isProfilePublic = profile?.isPublic !== false // Default to public
+        const isAcceptedFollower = currentFollowStatus === 'accepted'
+        
+        const canView = isOwner || isProfilePublic || isAcceptedFollower
+        setCanViewCollection(canView)
+        
+        // Only fetch games if allowed to view
+        if (canView) {
+          const userGames = await getUserGames(actualUserId)
+          setGames(userGames)
+        }
       } catch (err) {
         console.error('Error fetching user data:', err)
-        setError('Could not load this collection. It may be private or not exist.')
+        setError('Could not load this profile.')
       } finally {
         setLoading(false)
       }
@@ -64,7 +95,48 @@ export default function SharedProfile() {
     if (userIdOrUsername) {
       fetchUserData()
     }
-  }, [userIdOrUsername])
+  }, [userIdOrUsername, user])
+  
+  const handleFollow = async () => {
+    if (!user || !profileUserId || followLoading) return
+    
+    setFollowLoading(true)
+    try {
+      const result = await followUser(user.uid, profileUserId)
+      setFollowStatus(result.status)
+      
+      // If now accepted (public profile), fetch the games
+      if (result.status === 'accepted') {
+        setCanViewCollection(true)
+        const userGames = await getUserGames(profileUserId)
+        setGames(userGames)
+      }
+    } catch (err) {
+      console.error('Error following user:', err)
+    } finally {
+      setFollowLoading(false)
+    }
+  }
+  
+  const handleUnfollow = async () => {
+    if (!user || !profileUserId || followLoading) return
+    
+    setFollowLoading(true)
+    try {
+      await unfollowUser(user.uid, profileUserId)
+      setFollowStatus(null)
+      
+      // If profile is private, hide collection
+      if (profileData?.isPublic === false) {
+        setCanViewCollection(false)
+        setGames([])
+      }
+    } catch (err) {
+      console.error('Error unfollowing user:', err)
+    } finally {
+      setFollowLoading(false)
+    }
+  }
 
   const filteredGames = sortGames(
     games.filter(g => 
@@ -130,7 +202,39 @@ export default function SharedProfile() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span className="text-white font-medium">{displayName || 'User'}'s Collection</span>
+                {profileData?.isPublic === false && (
+                  <span className="px-2 py-0.5 bg-dark-700 text-dark-400 text-xs rounded">Private</span>
+                )}
               </div>
+              
+              {/* Follow/Unfollow Button */}
+              {isAuthenticated && !isOwnProfile && (
+                followStatus === 'accepted' ? (
+                  <button
+                    onClick={handleUnfollow}
+                    disabled={followLoading}
+                    className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {followLoading ? 'Loading...' : 'Following'}
+                  </button>
+                ) : followStatus === 'pending' ? (
+                  <button
+                    onClick={handleUnfollow}
+                    disabled={followLoading}
+                    className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-300 text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {followLoading ? 'Loading...' : 'Requested'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {followLoading ? 'Loading...' : 'Follow'}
+                  </button>
+                )
+              )}
               
               {isAuthenticated && (
                 <Link
@@ -147,21 +251,54 @@ export default function SharedProfile() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Stats Bar */}
-        <div className="flex items-center gap-6 mb-6 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-dark-400">Total Games:</span>
-            <span className="text-white font-semibold">{games.length}</span>
+        {!canViewCollection ? (
+          /* Private Collection Message */
+          <div className="flex flex-col items-center justify-center py-20">
+            <svg className="w-20 h-20 text-dark-600 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <h2 className="text-xl font-bold text-white mb-2">Private Collection</h2>
+            <p className="text-dark-400 text-center max-w-md mb-6">
+              {followStatus === 'pending' 
+                ? `Your follow request is pending. ${displayName || 'This user'} needs to accept it before you can view their collection.`
+                : `This collection is private. Follow ${displayName || 'this user'} to request access.`
+              }
+            </p>
+            {isAuthenticated && !isOwnProfile && !followStatus && (
+              <button
+                onClick={handleFollow}
+                disabled={followLoading}
+                className="px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-lg transition-colors"
+              >
+                {followLoading ? 'Loading...' : 'Send Follow Request'}
+              </button>
+            )}
+            {!isAuthenticated && (
+              <Link
+                to="/"
+                className="px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-lg transition-colors"
+              >
+                Sign in to follow
+              </Link>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-dark-400">Played:</span>
-            <span className="text-green-400 font-semibold">{playedCount}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-dark-400">Backlog:</span>
-            <span className="text-primary-400 font-semibold">{unplayedCount}</span>
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* Stats Bar */}
+            <div className="flex items-center gap-6 mb-6 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-dark-400">Total Games:</span>
+                <span className="text-white font-semibold">{games.length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-dark-400">Played:</span>
+                <span className="text-green-400 font-semibold">{playedCount}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-dark-400">Backlog:</span>
+                <span className="text-primary-400 font-semibold">{unplayedCount}</span>
+              </div>
+            </div>
 
         {/* Tabs and Controls */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -299,6 +436,8 @@ export default function SharedProfile() {
               />
             ))}
           </div>
+        )}
+          </>
         )}
       </main>
 

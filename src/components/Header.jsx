@@ -62,7 +62,7 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
   }, [showUserMenu])
 
   
-  const { user, username, isAuthenticated, loading, signInWithGoogle, signOut, firebaseEnabled } = useAuth()
+  const { user, username, isPublic, isAuthenticated, loading, signInWithGoogle, signOut, togglePrivacy, firebaseEnabled } = useAuth()
   
   const countryInfo = COUNTRIES[currentCountry]
 
@@ -244,6 +244,40 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
                               ))}
                             </select>
                           </div>
+                          
+                          {/* Privacy Toggle */}
+                          <div className="px-4 py-3 border-b border-white/10">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-white">Public Profile</p>
+                                <p className="text-xs text-dark-400">Appear in user search</p>
+                              </div>
+                              <button
+                                onClick={togglePrivacy}
+                                className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? 'bg-primary-600' : 'bg-dark-600'}`}
+                              >
+                                <span 
+                                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${isPublic ? 'left-6' : 'left-1'}`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Friends Page Link */}
+                          <a
+                            href="/friends"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setShowUserMenu(false)
+                              window.location.href = '/friends'
+                            }}
+                            className="w-full px-4 py-3 text-left text-dark-200 hover:bg-white/5 transition-colors flex items-center gap-2 border-b border-white/10"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Friends
+                          </a>
                           
                           {/* Share Profile Link */}
                           <button

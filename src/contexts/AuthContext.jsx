@@ -6,13 +6,14 @@ import {
   browserPopupRedirectResolver
 } from 'firebase/auth'
 import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase'
-import { saveUserProfile, getUserProfile } from '../services/firestoreService'
+import { saveUserProfile, getUserProfile, updateUserPrivacy } from '../services/firestoreService'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [username, setUsername] = useState(null)
+  const [isPublic, setIsPublic] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -43,14 +44,17 @@ export function AuthProvider({ children }) {
               photoURL: user.photoURL,
             })
             setUsername(newUsername)
+            setIsPublic(true) // Default to public for new users
           } else {
             setUsername(profile.username)
+            setIsPublic(profile.isPublic ?? true)
           }
         } catch (err) {
           console.error('Error fetching/creating username:', err)
         }
       } else {
         setUsername(null)
+        setIsPublic(true)
       }
       
       setLoading(false)
@@ -111,15 +115,29 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const togglePrivacy = async () => {
+    if (!user) return
+    
+    const newIsPublic = !isPublic
+    try {
+      await updateUserPrivacy(user.uid, newIsPublic)
+      setIsPublic(newIsPublic)
+    } catch (error) {
+      console.error('Error toggling privacy:', error)
+    }
+  }
+
   const value = {
     user,
     username,
+    isPublic,
     loading,
     error,
     firebaseEnabled,
     isAuthenticated: !!user,
     signInWithGoogle,
     signOut,
+    togglePrivacy,
   }
 
   return (

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GameStoreProvider } from './hooks/useGameStore.jsx'
 import Header from './components/Header'
 import SharedProfile from './components/SharedProfile'
+import FriendsPage from './components/FriendsPage'
 import SearchBar from './components/SearchBar'
 import TabNav from './components/TabNav'
 import GameList from './components/GameList'
@@ -310,6 +311,7 @@ function App() {
           <Routes>
             <Route path="/" element={<MainApp />} />
             <Route path="/u/:userId" element={<SharedProfile />} />
+            <Route path="/friends" element={<FriendsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
