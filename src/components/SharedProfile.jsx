@@ -14,9 +14,13 @@ export default function SharedProfile() {
   const [displayName, setDisplayName] = useState(null)
   const [selectedGame, setSelectedGame] = useState(null)
   const [activeTab, setActiveTab] = useState('unplayed')
-  const [viewMode, setViewMode] = useState('grid')
+  const [viewModes, setViewModes] = useState({ unplayed: 'grid', played: 'grid' })
   const [sortBy, setSortBy] = useState('priority')
   const [sortOrder, setSortOrder] = useState('desc')
+  
+  // Get current view mode for active tab
+  const viewMode = viewModes[activeTab] || 'grid'
+  const setViewMode = (mode) => setViewModes(prev => ({ ...prev, [activeTab]: mode }))
 
   useEffect(() => {
     const fetchUserData = async () => {
