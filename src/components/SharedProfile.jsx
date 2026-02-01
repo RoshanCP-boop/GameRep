@@ -198,7 +198,7 @@ export default function SharedProfile() {
             {isAuthenticated && (
               <Link
                 to="/"
-                className="px-2 py-1 sm:px-3 sm:py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-xs sm:text-sm font-medium rounded-lg transition-colors"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors"
               >
                 <span className="sm:hidden">Back</span>
                 <span className="hidden sm:inline">My Collection</span>
