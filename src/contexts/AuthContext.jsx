@@ -6,12 +6,13 @@ import {
   browserPopupRedirectResolver
 } from 'firebase/auth'
 import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase'
-import { saveUserProfile } from '../services/firestoreService'
+import { saveUserProfile, getUserProfile } from '../services/firestoreService'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [username, setUsername] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -26,8 +27,21 @@ export function AuthProvider({ children }) {
     }
 
     // Subscribe to auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
+      
+      // Fetch username if user is logged in
+      if (user) {
+        try {
+          const profile = await getUserProfile(user.uid)
+          setUsername(profile?.username || null)
+        } catch (err) {
+          console.error('Error fetching username:', err)
+        }
+      } else {
+        setUsername(null)
+      }
+      
       setLoading(false)
     }, (error) => {
       console.error('Auth state change error:', error)
@@ -51,11 +65,12 @@ export function AuthProvider({ children }) {
       
       // Save user profile to Firestore (for shared profile display name)
       if (result.user) {
-        await saveUserProfile(result.user.uid, {
+        const userUsername = await saveUserProfile(result.user.uid, {
           displayName: result.user.displayName,
           email: result.user.email,
           photoURL: result.user.photoURL,
         })
+        setUsername(userUsername)
       }
       
       return { success: true, user: result.user, isNewUser: result._tokenResponse?.isNewUser }
@@ -87,6 +102,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    username,
     loading,
     error,
     firebaseEnabled,

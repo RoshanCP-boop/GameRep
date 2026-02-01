@@ -62,7 +62,7 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
   }, [showUserMenu])
 
   
-  const { user, isAuthenticated, loading, signInWithGoogle, signOut, firebaseEnabled } = useAuth()
+  const { user, username, isAuthenticated, loading, signInWithGoogle, signOut, firebaseEnabled } = useAuth()
   
   const countryInfo = COUNTRIES[currentCountry]
 
@@ -248,7 +248,8 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
                           {/* Share Profile Link */}
                           <button
                             onClick={() => {
-                              const shareUrl = `${window.location.origin}/u/${user.uid}`
+                              // Use username if available, otherwise fall back to uid
+                              const shareUrl = `${window.location.origin}/u/${username || user.uid}`
                               navigator.clipboard.writeText(shareUrl)
                               // Show brief feedback
                               const btn = document.getElementById('share-btn')

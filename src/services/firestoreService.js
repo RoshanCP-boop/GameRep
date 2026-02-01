@@ -235,9 +235,9 @@ export const getUserGames = async (userId) => {
 }
 
 /**
- * Get user's display name from their profile
+ * Get user's profile data (display name, username, etc.)
  */
-export const getUserDisplayName = async (userId) => {
+export const getUserProfile = async (userId) => {
   if (!isFirebaseConfigured() || !db) {
     return null
   }
@@ -247,14 +247,34 @@ export const getUserDisplayName = async (userId) => {
     const userDoc = await getDoc(userRef)
     
     if (userDoc.exists()) {
-      const data = userDoc.data()
-      return data.displayName || data.name || null
+      return userDoc.data()
     }
     return null
   } catch (error) {
-    console.error('Error fetching user display name:', error)
+    console.error('Error fetching user profile:', error)
     return null
   }
+}
+
+/**
+ * Get user's display name from their profile
+ */
+export const getUserDisplayName = async (userId) => {
+  const profile = await getUserProfile(userId)
+  return profile?.displayName || profile?.name || null
+}
+
+/**
+ * Create a URL-friendly username from display name
+ */
+const createUsername = (displayName) => {
+  if (!displayName) return null
+  return displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')          // Replace spaces with hyphens
+    .replace(/-+/g, '-')           // Replace multiple hyphens with single
+    .replace(/^-|-$/g, '')         // Remove leading/trailing hyphens
 }
 
 /**
@@ -267,12 +287,44 @@ export const saveUserProfile = async (userId, profileData) => {
 
   try {
     const userRef = doc(db, 'users', userId)
+    
+    // Create username from display name
+    const username = createUsername(profileData.displayName)
+    
     await setDoc(userRef, {
       ...cleanUndefinedValues(profileData),
+      username,
       updatedAt: serverTimestamp()
     }, { merge: true })
+    
+    return username
   } catch (error) {
     console.error('Error saving user profile:', error)
     throw error
+  }
+}
+
+/**
+ * Look up user ID by username
+ */
+export const getUserIdByUsername = async (username) => {
+  if (!isFirebaseConfigured() || !db) {
+    return null
+  }
+
+  try {
+    const { query: firestoreQuery, where, collection: firestoreCollection, limit } = await import('firebase/firestore')
+    const usersRef = firestoreCollection(db, 'users')
+    const q = firestoreQuery(usersRef, where('username', '==', username.toLowerCase()), limit(1))
+    const snapshot = await getDocs(q)
+    
+    if (snapshot.empty) {
+      return null
+    }
+    
+    return snapshot.docs[0].id
+  } catch (error) {
+    console.error('Error looking up user by username:', error)
+    return null
   }
 }

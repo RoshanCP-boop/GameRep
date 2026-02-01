@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getUserGames, getUserDisplayName } from '../services/firestoreService'
+import { getUserGames, getUserDisplayName, getUserIdByUsername } from '../services/firestoreService'
 import GameCard from './GameCard'
 import GameCardList from './GameCardList'
 import GameDetails from './GameDetails'
 
 export default function SharedProfile() {
-  const { userId } = useParams()
+  const { userId: userIdOrUsername } = useParams()
   const [games, setGames] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -21,9 +21,25 @@ export default function SharedProfile() {
         setLoading(true)
         setError(null)
         
+        // Determine if this is a username or userId
+        // Firebase UIDs are typically 28 characters of alphanumeric
+        // Usernames are lowercase with hyphens
+        let actualUserId = userIdOrUsername
+        
+        // If it doesn't look like a Firebase UID, try to look it up as a username
+        const looksLikeUsername = /^[a-z0-9-]+$/.test(userIdOrUsername) && userIdOrUsername.length < 28
+        
+        if (looksLikeUsername) {
+          const foundUserId = await getUserIdByUsername(userIdOrUsername)
+          if (foundUserId) {
+            actualUserId = foundUserId
+          }
+          // If not found as username, still try as userId (fallback)
+        }
+        
         const [userGames, userName] = await Promise.all([
-          getUserGames(userId),
-          getUserDisplayName(userId)
+          getUserGames(actualUserId),
+          getUserDisplayName(actualUserId)
         ])
         
         setGames(userGames)
@@ -36,10 +52,10 @@ export default function SharedProfile() {
       }
     }
 
-    if (userId) {
+    if (userIdOrUsername) {
       fetchUserData()
     }
-  }, [userId])
+  }, [userIdOrUsername])
 
   const filteredGames = games.filter(g => 
     activeTab === 'played' ? g.status === 'played' : g.status !== 'played'
