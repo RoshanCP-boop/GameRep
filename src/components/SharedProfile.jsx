@@ -187,64 +187,65 @@ export default function SharedProfile() {
     <div className="min-h-screen bg-dark-950">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <img src="/logo.svg" alt="GameRep" className="w-10 h-10" />
-                <span className="text-xl font-bold text-white">GameRep</span>
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          {/* Top row: Logo and back button */}
+          <div className="flex items-center justify-between mb-2 sm:mb-0">
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/logo.svg" alt="GameRep" className="w-8 h-8 sm:w-10 sm:h-10" />
+              <span className="text-lg sm:text-xl font-bold text-white hidden sm:inline">GameRep</span>
+            </Link>
+            
+            {isAuthenticated && (
+              <Link
+                to="/"
+                className="px-2 py-1 sm:px-3 sm:py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-xs sm:text-sm font-medium rounded-lg transition-colors"
+              >
+                <span className="sm:hidden">Back</span>
+                <span className="hidden sm:inline">My Collection</span>
               </Link>
+            )}
+          </div>
+          
+          {/* Bottom row: Profile info and follow button */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-dark-400 min-w-0">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="text-white font-medium text-sm sm:text-base truncate">{displayName || 'User'}'s Collection</span>
+              {profileData?.isPublic === false && (
+                <span className="px-1.5 py-0.5 bg-dark-700 text-dark-400 text-xs rounded shrink-0">Private</span>
+              )}
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-dark-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="text-white font-medium">{displayName || 'User'}'s Collection</span>
-                {profileData?.isPublic === false && (
-                  <span className="px-2 py-0.5 bg-dark-700 text-dark-400 text-xs rounded">Private</span>
-                )}
-              </div>
-              
-              {/* Follow/Unfollow Button */}
-              {isAuthenticated && !isOwnProfile && (
-                followStatus === 'accepted' ? (
-                  <button
-                    onClick={handleUnfollow}
-                    disabled={followLoading}
-                    className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors"
-                  >
-                    {followLoading ? 'Loading...' : 'Following'}
-                  </button>
-                ) : followStatus === 'pending' ? (
-                  <button
-                    onClick={handleUnfollow}
-                    disabled={followLoading}
-                    className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-300 text-sm font-medium rounded-lg transition-colors"
-                  >
-                    {followLoading ? 'Loading...' : 'Requested'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleFollow}
-                    disabled={followLoading}
-                    className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors"
-                  >
-                    {followLoading ? 'Loading...' : 'Follow'}
-                  </button>
-                )
-              )}
-              
-              {isAuthenticated && (
-                <Link
-                  to="/"
-                  className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors"
+            {/* Follow/Unfollow Button */}
+            {isAuthenticated && !isOwnProfile && (
+              followStatus === 'accepted' ? (
+                <button
+                  onClick={handleUnfollow}
+                  disabled={followLoading}
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-xs sm:text-sm font-medium rounded-lg transition-colors shrink-0"
                 >
-                  My Collection
-                </Link>
-              )}
-            </div>
+                  {followLoading ? '...' : 'Following'}
+                </button>
+              ) : followStatus === 'pending' ? (
+                <button
+                  onClick={handleUnfollow}
+                  disabled={followLoading}
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-300 text-xs sm:text-sm font-medium rounded-lg transition-colors shrink-0"
+                >
+                  {followLoading ? '...' : 'Requested'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors shrink-0"
+                >
+                  {followLoading ? '...' : 'Follow'}
+                </button>
+              )
+            )}
           </div>
         </div>
       </header>
