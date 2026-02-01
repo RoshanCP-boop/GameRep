@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
   getUserFollowers, 
@@ -12,6 +12,7 @@ import {
 
 export default function FriendsPage() {
   const { user, isAuthenticated, loading } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('followers')
   const [followers, setFollowers] = useState([])
   const [following, setFollowing] = useState([])
@@ -102,7 +103,7 @@ export default function FriendsPage() {
   const handleSelectUser = (username) => {
     setShowDropdown(false)
     setSearchQuery('')
-    window.location.href = `/u/${username}`
+    navigate(`/u/${username}`)
   }
 
   const handleAccept = async (followerId) => {
