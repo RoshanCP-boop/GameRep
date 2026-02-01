@@ -21,6 +21,7 @@ export default function FriendsPage() {
   const [searchResults, setSearchResults] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
+  const [error, setError] = useState(null)
   const usersLoaded = allUsers.length > 0
   const [actionLoading, setActionLoading] = useState(null)
   const searchRef = useRef(null)
@@ -70,20 +71,29 @@ export default function FriendsPage() {
 
   const fetchData = async () => {
     setDataLoading(true)
+    setError(null)
+    
+    const errors = []
+    
     try {
       // Fetch each independently so one failure doesn't break others
       const [followersList, followingList, requestsList, usersList] = await Promise.all([
-        getUserFollowers(user.uid, 'accepted').catch(() => []),
-        getUserFollowing(user.uid).catch(() => []),
-        getUserFollowers(user.uid, 'pending').catch(() => []),
-        getAllUsers(100).catch(() => [])
+        getUserFollowers(user.uid, 'accepted').catch(e => { errors.push('followers: ' + e.message); return [] }),
+        getUserFollowing(user.uid).catch(e => { errors.push('following: ' + e.message); return [] }),
+        getUserFollowers(user.uid, 'pending').catch(e => { errors.push('requests: ' + e.message); return [] }),
+        getAllUsers(100).catch(e => { errors.push('users: ' + e.message); return [] })
       ])
       setFollowers(followersList || [])
       setFollowing(followingList || [])
       setRequests(requestsList || [])
       setAllUsers(usersList || [])
+      
+      if (errors.length > 0) {
+        setError(errors.join(' | '))
+      }
     } catch (err) {
       console.error('Error fetching data:', err)
+      setError(err.message)
     } finally {
       setDataLoading(false)
     }
@@ -167,6 +177,14 @@ export default function FriendsPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-white mb-6">Friends</h1>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <p className="font-medium">Error loading data:</p>
+            <p className="text-xs mt-1 break-all">{error}</p>
+            <p className="text-xs mt-2 text-red-300">Check Firestore rules include followers/following collections</p>
+          </div>
+        )}
 
         {/* Search Users */}
         <div className="mb-8" ref={searchRef}>
