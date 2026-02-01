@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
   getUserFollowers, 
@@ -13,7 +13,17 @@ import {
 export default function FriendsPage() {
   const { user, isAuthenticated, loading } = useAuth()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('followers')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [activeTab, setActiveTabState] = useState(() => {
+    const tab = searchParams.get('tab')
+    return ['followers', 'following', 'requests'].includes(tab) ? tab : 'followers'
+  })
+  
+  // Update URL when tab changes
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab)
+    setSearchParams({ tab }, { replace: true })
+  }
   const [followers, setFollowers] = useState([])
   const [following, setFollowing] = useState([])
   const [requests, setRequests] = useState([])
