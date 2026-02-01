@@ -145,9 +145,16 @@ export default function FriendsPage() {
     setActionLoading(followerId)
     try {
       await acceptFollowRequest(user.uid, followerId)
-      await fetchData()
+      // Immediately update local state
+      const acceptedUser = requests.find(r => r.userId === followerId)
+      setRequests(prev => prev.filter(r => r.userId !== followerId))
+      if (acceptedUser) {
+        setFollowers(prev => [...prev, { ...acceptedUser, status: 'accepted' }])
+      }
     } catch (err) {
       console.error('Error accepting:', err)
+      // Refresh on error to sync state
+      await fetchData()
     } finally {
       setActionLoading(null)
     }
@@ -157,9 +164,11 @@ export default function FriendsPage() {
     setActionLoading(followerId)
     try {
       await declineFollowRequest(user.uid, followerId)
-      await fetchData()
+      // Immediately update local state
+      setRequests(prev => prev.filter(r => r.userId !== followerId))
     } catch (err) {
       console.error('Error declining:', err)
+      await fetchData()
     } finally {
       setActionLoading(null)
     }
@@ -169,9 +178,11 @@ export default function FriendsPage() {
     setActionLoading(targetUserId)
     try {
       await unfollowUser(user.uid, targetUserId)
-      await fetchData()
+      // Immediately update local state
+      setFollowing(prev => prev.filter(f => f.userId !== targetUserId))
     } catch (err) {
       console.error('Error unfollowing:', err)
+      await fetchData()
     } finally {
       setActionLoading(null)
     }

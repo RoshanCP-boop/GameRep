@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { getCountry, setCountry, COUNTRIES } from '../api/itad'
 import { useAuth } from '../contexts/AuthContext'
+import { getUserFollowers } from '../services/firestoreService'
 
 export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker }) {
   const navigate = useNavigate()
@@ -12,6 +13,7 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const [installPrompt, setInstallPrompt] = useState(null)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const userButtonRef = useRef(null)
 
   // Capture the install prompt
@@ -65,6 +67,17 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
 
   
   const { user, username, isPublic, isAuthenticated, loading, signInWithGoogle, signOut, togglePrivacy, firebaseEnabled } = useAuth()
+  
+  // Fetch pending friend requests count
+  useEffect(() => {
+    if (user) {
+      getUserFollowers(user.uid, 'pending')
+        .then(requests => setPendingRequestsCount(requests?.length || 0))
+        .catch(() => setPendingRequestsCount(0))
+    } else {
+      setPendingRequestsCount(0)
+    }
+  }, [user])
   
   const countryInfo = COUNTRIES[currentCountry]
 
@@ -277,6 +290,11 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                             Friends
+                            {pendingRequestsCount > 0 && (
+                              <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-medium rounded-full">
+                                {pendingRequestsCount}
+                              </span>
+                            )}
                           </button>
                           
                           {/* Share Profile Link */}
