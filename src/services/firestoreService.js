@@ -406,6 +406,26 @@ export const acceptFollowRequest = async (userId, followerId) => {
 }
 
 /**
+ * Remove a follower (they will no longer follow you)
+ */
+export const removeFollower = async (userId, followerId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return
+  }
+
+  try {
+    const followerRef = doc(db, 'users', userId, 'followers', followerId)
+    const followingRef = doc(db, 'users', followerId, 'following', userId)
+    
+    await deleteDoc(followerRef)
+    await deleteDoc(followingRef)
+  } catch (error) {
+    console.error('Error removing follower:', error)
+    throw error
+  }
+}
+
+/**
  * Decline/remove a follow request
  */
 export const declineFollowRequest = async (userId, followerId) => {

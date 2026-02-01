@@ -7,6 +7,7 @@ import {
   acceptFollowRequest, 
   declineFollowRequest,
   unfollowUser,
+  removeFollower,
   getAllUsers
 } from '../services/firestoreService'
 
@@ -188,6 +189,20 @@ export default function FriendsPage() {
     }
   }
 
+  const handleRemoveFollower = async (followerId) => {
+    setActionLoading(followerId)
+    try {
+      await removeFollower(user.uid, followerId)
+      // Immediately update local state
+      setFollowers(prev => prev.filter(f => f.userId !== followerId))
+    } catch (err) {
+      console.error('Error removing follower:', err)
+      await fetchData()
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950 flex items-center justify-center">
@@ -355,12 +370,21 @@ export default function FriendsPage() {
                       <p className="text-white font-medium">{f.displayName}</p>
                       <p className="text-dark-400 text-sm">@{f.username}</p>
                     </div>
-                    <Link
-                      to={`/u/${f.username}`}
-                      className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors"
-                    >
-                      View
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/u/${f.username}`}
+                        className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-200 text-sm font-medium rounded-lg transition-colors"
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => handleRemoveFollower(f.userId)}
+                        disabled={actionLoading === f.userId}
+                        className="px-3 py-1.5 bg-dark-700 hover:bg-red-600/20 text-dark-300 hover:text-red-400 text-sm font-medium rounded-lg transition-colors"
+                      >
+                        {actionLoading === f.userId ? '...' : 'Remove'}
+                      </button>
+                    </div>
                   </div>
                 ))
               )
