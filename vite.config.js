@@ -40,7 +40,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        sourcemap: false
+        sourcemap: false,
+        // Skip waiting - new service worker takes over immediately
+        skipWaiting: true,
+        clientsClaim: true,
+        // Don't cache API calls
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/firestore\.googleapis\.com/,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /^https:\/\/identitytoolkit\.googleapis\.com/,
+            handler: 'NetworkOnly'
+          }
+        ]
       },
       minify: false,
       devOptions: {
