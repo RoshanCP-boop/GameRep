@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
@@ -19,14 +19,62 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchLoading, setSearchLoading] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
+  const searchRef = useRef(null)
+  const debounceRef = useRef(null)
 
   useEffect(() => {
     if (user) {
       fetchData()
     }
   }, [user])
+  
+  // Live search as user types
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+    
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      setShowDropdown(false)
+      return
+    }
+    
+    debounceRef.current = setTimeout(async () => {
+      setSearchLoading(true)
+      try {
+        const results = await searchUsers(searchQuery)
+        // Filter out self
+        setSearchResults(results.filter(u => u.userId !== user.uid))
+        setShowDropdown(true)
+      } catch (err) {
+        console.error('Error searching:', err)
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 300) // 300ms debounce
+    
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [searchQuery, user])
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const fetchData = async () => {
     setDataLoading(true)
@@ -46,20 +94,10 @@ export default function FriendsPage() {
     }
   }
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
-    
-    setSearchLoading(true)
-    try {
-      const results = await searchUsers(searchQuery)
-      // Filter out self
-      setSearchResults(results.filter(u => u.userId !== user.uid))
-    } catch (err) {
-      console.error('Error searching:', err)
-    } finally {
-      setSearchLoading(false)
-    }
+  const handleSelectUser = (username) => {
+    setShowDropdown(false)
+    setSearchQuery('')
+    window.location.href = `/u/${username}`
   }
 
   const handleAccept = async (followerId) => {
@@ -136,44 +174,73 @@ export default function FriendsPage() {
         <h1 className="text-2xl font-bold text-white mb-6">Friends</h1>
 
         {/* Search Users */}
-        <div className="mb-8">
+        <div className="mb-8" ref={searchRef}>
           <h2 className="text-lg font-semibold text-white mb-3">Find Users</h2>
           <p className="text-dark-400 text-sm mb-3">Search by username to find and follow other collectors</p>
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by username..."
-              className="flex-1 bg-dark-800 border border-dark-700 rounded-lg px-4 py-2 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
-            />
-            <button
-              type="submit"
-              disabled={searchLoading}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-lg transition-colors"
-            >
-              {searchLoading ? 'Searching...' : 'Search'}
-            </button>
-          </form>
-          
-          {searchResults.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {searchResults.map(u => (
-                <div key={u.userId} className="flex items-center justify-between p-3 bg-dark-800 rounded-lg">
-                  <div>
-                    <p className="text-white font-medium">{u.displayName}</p>
-                    <p className="text-dark-400 text-sm">@{u.username}</p>
-                  </div>
-                  <Link
-                    to={`/u/${u.username}`}
-                    className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors"
-                  >
-                    View Profile
-                  </Link>
+          <div className="relative">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                placeholder="Search by username..."
+                className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-10 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 transition-colors"
+              />
+              {searchLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                 </div>
-              ))}
+              )}
+              {searchQuery && !searchLoading && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('')
+                    setSearchResults([])
+                    setShowDropdown(false)
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
-          )}
+            
+            {/* Dropdown Results */}
+            {showDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-dark-800 border border-dark-700 rounded-xl overflow-hidden shadow-xl z-50 max-h-80 overflow-y-auto">
+                {searchResults.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-dark-400">
+                    No users found matching "{searchQuery}"
+                  </div>
+                ) : (
+                  searchResults.map(u => (
+                    <button
+                      key={u.userId}
+                      onClick={() => handleSelectUser(u.username)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-dark-700 transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold shrink-0">
+                        {(u.displayName || u.username || 'U')[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">{u.displayName}</p>
+                        <p className="text-dark-400 text-sm truncate">@{u.username}</p>
+                      </div>
+                      <svg className="w-5 h-5 text-dark-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
