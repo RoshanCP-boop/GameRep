@@ -138,6 +138,7 @@ export default function FriendsPage() {
         {/* Search Users */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-white mb-3">Find Users</h2>
+          <p className="text-dark-400 text-sm mb-3">Search by username to find and follow other collectors</p>
           <form onSubmit={handleSearch} className="flex gap-2">
             <input
               type="text"

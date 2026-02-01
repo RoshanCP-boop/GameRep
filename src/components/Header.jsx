@@ -249,8 +249,8 @@ export default function Header({ onRegionChange, onOpenStats, onOpenRandomPicker
                           <div className="px-4 py-3 border-b border-white/10">
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="text-sm text-white">Public Profile</p>
-                                <p className="text-xs text-dark-400">Appear in user search</p>
+                                <p className="text-sm text-white">Public Collection</p>
+                                <p className="text-xs text-dark-400">Anyone can view your games</p>
                               </div>
                               <button
                                 onClick={togglePrivacy}

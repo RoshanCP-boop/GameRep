@@ -512,7 +512,7 @@ export const getUserFollowing = async (userId) => {
 }
 
 /**
- * Search for public users by username
+ * Search for users by username (all users are searchable)
  */
 export const searchUsers = async (searchQuery, limit = 10) => {
   if (!isFirebaseConfigured() || !db || !searchQuery.trim()) {
@@ -523,11 +523,10 @@ export const searchUsers = async (searchQuery, limit = 10) => {
     const { query: firestoreQuery, where, collection: firestoreCollection, limit: firestoreLimit } = await import('firebase/firestore')
     const usersRef = firestoreCollection(db, 'users')
     
-    // Search for public users whose username starts with the query
+    // Search for users whose username starts with the query
     const searchLower = searchQuery.toLowerCase()
     const q = firestoreQuery(
       usersRef, 
-      where('isPublic', '==', true),
       where('username', '>=', searchLower),
       where('username', '<=', searchLower + '\uf8ff'),
       firestoreLimit(limit)
