@@ -9,7 +9,9 @@ import {
   writeBatch,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  where,
+  limit
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../config/firebase'
 
@@ -514,22 +516,22 @@ export const getUserFollowing = async (userId) => {
 /**
  * Search for users by username (all users are searchable)
  */
-export const searchUsers = async (searchQuery, limit = 10) => {
+export const searchUsers = async (searchQuery, maxResults = 10) => {
   if (!isFirebaseConfigured() || !db || !searchQuery.trim()) {
     return []
   }
 
   try {
-    const { query: firestoreQuery, where, collection: firestoreCollection, limit: firestoreLimit } = await import('firebase/firestore')
-    const usersRef = firestoreCollection(db, 'users')
+    // Use already imported functions from top of file
+    const usersRef = collection(db, 'users')
     
     // Search for users whose username starts with the query
-    const searchLower = searchQuery.toLowerCase()
-    const q = firestoreQuery(
+    const searchLower = searchQuery.toLowerCase().trim()
+    const q = query(
       usersRef, 
       where('username', '>=', searchLower),
       where('username', '<=', searchLower + '\uf8ff'),
-      firestoreLimit(limit)
+      limit(maxResults)
     )
     
     const snapshot = await getDocs(q)
