@@ -547,6 +547,29 @@ export const searchUsers = async (searchQuery, maxResults = 10) => {
 }
 
 /**
+ * Get all users (for preloading and local search)
+ */
+export const getAllUsers = async (maxResults = 100) => {
+  if (!isFirebaseConfigured() || !db) {
+    return []
+  }
+
+  try {
+    const usersRef = collection(db, 'users')
+    const q = query(usersRef, limit(maxResults))
+    const snapshot = await getDocs(q)
+    
+    return snapshot.docs.map(doc => ({
+      userId: doc.id,
+      ...doc.data()
+    }))
+  } catch (error) {
+    console.error('Error getting all users:', error)
+    return []
+  }
+}
+
+/**
  * Look up user ID by username
  */
 export const getUserIdByUsername = async (username) => {

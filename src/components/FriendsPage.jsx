@@ -7,7 +7,7 @@ import {
   acceptFollowRequest, 
   declineFollowRequest,
   unfollowUser,
-  searchUsers
+  getAllUsers
 } from '../services/firestoreService'
 
 export default function FriendsPage() {
@@ -17,13 +17,13 @@ export default function FriendsPage() {
   const [following, setFollowing] = useState([])
   const [requests, setRequests] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [allUsers, setAllUsers] = useState([]) // Preloaded users for instant search
   const [searchResults, setSearchResults] = useState([])
-  const [searchLoading, setSearchLoading] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
+  const usersLoaded = allUsers.length > 0
   const [actionLoading, setActionLoading] = useState(null)
   const searchRef = useRef(null)
-  const debounceRef = useRef(null)
 
   useEffect(() => {
     if (user) {
@@ -31,37 +31,23 @@ export default function FriendsPage() {
     }
   }, [user])
   
-  // Live search as user types
+  // Filter locally as user types (instant!)
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-    
     if (!searchQuery.trim()) {
       setSearchResults([])
       setShowDropdown(false)
       return
     }
     
-    debounceRef.current = setTimeout(async () => {
-      setSearchLoading(true)
-      try {
-        const results = await searchUsers(searchQuery)
-        setSearchResults(results)
-        setShowDropdown(true)
-      } catch (err) {
-        console.error('Error searching:', err)
-      } finally {
-        setSearchLoading(false)
-      }
-    }, 300) // 300ms debounce
+    const searchLower = searchQuery.toLowerCase().trim()
+    const filtered = allUsers.filter(u => 
+      u.username?.toLowerCase().includes(searchLower) ||
+      u.displayName?.toLowerCase().includes(searchLower)
+    ).slice(0, 10)
     
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-      }
-    }
-  }, [searchQuery, user])
+    setSearchResults(filtered)
+    setShowDropdown(true)
+  }, [searchQuery, allUsers])
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -78,14 +64,16 @@ export default function FriendsPage() {
   const fetchData = async () => {
     setDataLoading(true)
     try {
-      const [followersList, followingList, requestsList] = await Promise.all([
+      const [followersList, followingList, requestsList, usersList] = await Promise.all([
         getUserFollowers(user.uid, 'accepted'),
         getUserFollowing(user.uid),
-        getUserFollowers(user.uid, 'pending')
+        getUserFollowers(user.uid, 'pending'),
+        getAllUsers(100) // Preload users for instant search
       ])
       setFollowers(followersList)
       setFollowing(followingList)
       setRequests(requestsList)
+      setAllUsers(usersList)
     } catch (err) {
       console.error('Error fetching data:', err)
     } finally {
@@ -189,12 +177,12 @@ export default function FriendsPage() {
                 placeholder="Search by username..."
                 className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-10 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 transition-colors"
               />
-              {searchLoading && (
+              {!usersLoaded && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
-              {searchQuery && !searchLoading && (
+              {searchQuery && usersLoaded && (
                 <button
                   onClick={() => {
                     setSearchQuery('')
