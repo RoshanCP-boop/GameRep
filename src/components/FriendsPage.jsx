@@ -47,8 +47,7 @@ export default function FriendsPage() {
       setSearchLoading(true)
       try {
         const results = await searchUsers(searchQuery)
-        // Filter out self
-        setSearchResults(results.filter(u => u.userId !== user.uid))
+        setSearchResults(results)
         setShowDropdown(true)
       } catch (err) {
         console.error('Error searching:', err)
