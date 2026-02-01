@@ -15,8 +15,8 @@ export default function SharedProfile() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [activeTab, setActiveTab] = useState('unplayed')
   const [viewMode, setViewMode] = useState('grid')
-  const [sortBy, setSortBy] = useState('customOrder')
-  const [sortOrder, setSortOrder] = useState('asc')
+  const [sortBy, setSortBy] = useState('priority')
+  const [sortOrder, setSortOrder] = useState('desc')
 
   useEffect(() => {
     const fetchUserData = async () => {
