@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GameStoreProvider } from './hooks/useGameStore.jsx'
 import Header from './components/Header'
+import SharedProfile from './components/SharedProfile'
 import SearchBar from './components/SearchBar'
 import TabNav from './components/TabNav'
 import GameList from './components/GameList'
@@ -308,6 +309,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<MainApp />} />
+            <Route path="/u/:userId" element={<SharedProfile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

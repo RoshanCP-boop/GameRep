@@ -3,7 +3,7 @@ import { getFullGameInfo, formatPrice, getCountry, COUNTRIES } from '../api/itad
 import { useGameStore } from '../hooks/useGameStore.jsx'
 import CustomLinkForm from './CustomLinkForm'
 
-export default function GameDetails({ game, onClose }) {
+export default function GameDetails({ game, onClose, readOnly = false }) {
   const [details, setDetails] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -12,14 +12,15 @@ export default function GameDetails({ game, onClose }) {
   
   const { addGame, removeGame, toggleGameStatus, isGameInCollection, getGame, addCustomLink, removeCustomLink, updateNotes, updatePriority, updateGame } = useGameStore()
   
+  // In read-only mode, use the game data directly instead of checking collection
+  const inCollection = readOnly ? true : isGameInCollection(game.id)
+  const storedGame = readOnly ? game : (inCollection ? getGame(game.id) : null)
+  
   // Safety check - if game prop is invalid, close the modal
   if (!game || !game.id) {
     onClose?.()
     return null
   }
-  
-  const inCollection = isGameInCollection(game.id)
-  const storedGame = inCollection ? getGame(game.id) : null
   
   const country = getCountry()
   const countryInfo = COUNTRIES[country]
@@ -282,8 +283,8 @@ export default function GameDetails({ game, onClose }) {
                 )
               })()}
               
-              {/* Custom link form */}
-              {inCollection && (
+              {/* Custom link form - hidden in read-only mode */}
+              {inCollection && !readOnly && (
                 <div>
                   {showLinkForm ? (
                     <CustomLinkForm 
@@ -326,7 +327,7 @@ export default function GameDetails({ game, onClose }) {
               )}
               
               {/* Priority & Notes (only for collection items) */}
-              {inCollection && (
+              {inCollection && !readOnly && (
                 <div className="space-y-4 p-4 bg-dark-800/50 rounded-xl">
                   {/* Priority Stars (hidden for played games) */}
                   {storedGame?.status !== 'played' && (
@@ -374,49 +375,81 @@ export default function GameDetails({ game, onClose }) {
                 </div>
               )}
               
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-dark-800">
-                {inCollection ? (
-                  <>
+              {/* Read-only view of priority and notes for shared profiles */}
+              {readOnly && (storedGame?.priority > 0 || storedGame?.notes) && (
+                <div className="space-y-4 p-4 bg-dark-800/50 rounded-xl">
+                  {storedGame?.priority > 0 && storedGame?.status !== 'played' && (
+                    <div>
+                      <h4 className="text-xs font-medium text-dark-500 uppercase tracking-wide mb-2">Priority</h4>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3].map((star) => (
+                          <svg 
+                            key={star}
+                            className={`w-6 h-6 ${star <= storedGame.priority ? 'text-yellow-400' : 'text-dark-600'}`}
+                            fill={star <= storedGame.priority ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {storedGame?.notes && (
+                    <div>
+                      <h4 className="text-xs font-medium text-dark-500 uppercase tracking-wide mb-2">Notes</h4>
+                      <p className="text-sm text-dark-300 whitespace-pre-wrap">{storedGame.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Action buttons - hidden in read-only mode */}
+              {!readOnly && (
+                <div className="flex flex-wrap gap-3 pt-4 border-t border-dark-800">
+                  {inCollection ? (
+                    <>
+                      <button
+                        onClick={() => toggleGameStatus(game.id)}
+                        className="btn-primary flex items-center gap-2"
+                      >
+                        {storedGame?.status === 'played' ? (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Mark as Unplayed
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Mark as Played
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={handleRemoveFromCollection}
+                        className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                      >
+                        Remove from Collection
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={() => toggleGameStatus(game.id)}
+                      onClick={handleAddToCollection}
                       className="btn-primary flex items-center gap-2"
                     >
-                      {storedGame?.status === 'played' ? (
-                        <>
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Mark as Unplayed
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          Mark as Played
-                        </>
-                      )}
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add to Collection
                     </button>
-                    <button
-                      onClick={handleRemoveFromCollection}
-                      className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                    >
-                      Remove from Collection
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={handleAddToCollection}
-                    className="btn-primary flex items-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add to Collection
-                  </button>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

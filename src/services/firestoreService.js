@@ -3,6 +3,8 @@ import {
   doc, 
   setDoc, 
   deleteDoc, 
+  getDoc,
+  getDocs,
   onSnapshot,
   writeBatch,
   serverTimestamp,
@@ -198,6 +200,79 @@ export const batchUpdateGames = async (userId, updates) => {
     await batch.commit()
   } catch (error) {
     console.error('Error batch updating games:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all games for a user (one-time fetch for shared profiles)
+ */
+export const getUserGames = async (userId) => {
+  if (!isFirebaseConfigured() || !db) {
+    throw new Error('Firebase not configured')
+  }
+
+  try {
+    const gamesRef = getGamesCollection(userId)
+    if (!gamesRef) {
+      throw new Error('Could not access user games')
+    }
+
+    const q = query(gamesRef, orderBy('customOrder', 'asc'))
+    const snapshot = await getDocs(q)
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        ...data,
+        id: data.id || doc.id
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching user games:', error)
+    throw error
+  }
+}
+
+/**
+ * Get user's display name from their profile
+ */
+export const getUserDisplayName = async (userId) => {
+  if (!isFirebaseConfigured() || !db) {
+    return null
+  }
+
+  try {
+    const userRef = doc(db, 'users', userId)
+    const userDoc = await getDoc(userRef)
+    
+    if (userDoc.exists()) {
+      const data = userDoc.data()
+      return data.displayName || data.name || null
+    }
+    return null
+  } catch (error) {
+    console.error('Error fetching user display name:', error)
+    return null
+  }
+}
+
+/**
+ * Save user profile data (display name, etc.)
+ */
+export const saveUserProfile = async (userId, profileData) => {
+  if (!isFirebaseConfigured() || !db) {
+    return
+  }
+
+  try {
+    const userRef = doc(db, 'users', userId)
+    await setDoc(userRef, {
+      ...cleanUndefinedValues(profileData),
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+  } catch (error) {
+    console.error('Error saving user profile:', error)
     throw error
   }
 }

@@ -6,6 +6,7 @@ import {
   browserPopupRedirectResolver
 } from 'firebase/auth'
 import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase'
+import { saveUserProfile } from '../services/firestoreService'
 
 const AuthContext = createContext(null)
 
@@ -47,6 +48,16 @@ export function AuthProvider({ children }) {
       setError(null)
       // Use browserPopupRedirectResolver to ensure popup behavior
       const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver)
+      
+      // Save user profile to Firestore (for shared profile display name)
+      if (result.user) {
+        await saveUserProfile(result.user.uid, {
+          displayName: result.user.displayName,
+          email: result.user.email,
+          photoURL: result.user.photoURL,
+        })
+      }
+      
       return { success: true, user: result.user, isNewUser: result._tokenResponse?.isNewUser }
     } catch (error) {
       console.error('Sign in error:', error)
