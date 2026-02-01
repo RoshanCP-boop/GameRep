@@ -21,11 +21,19 @@ function MainApp() {
   const [showRandomPicker, setShowRandomPicker] = useState(false)
   const [collectionSearch, setCollectionSearch] = useState('')
   const [currentCountry, setCurrentCountry] = useState(getCountry())
-  const [viewModes, setViewModes] = useState({ unplayed: 'grid', played: 'grid' }) // per-tab view modes
+  // Persist view modes in localStorage
+  const [viewModes, setViewModes] = useState(() => {
+    const saved = localStorage.getItem('gamerep-view-modes')
+    return saved ? JSON.parse(saved) : { unplayed: 'grid', played: 'grid' }
+  })
   
   // Get current view mode for active tab
   const viewMode = viewModes[activeTab] || 'grid'
-  const setViewMode = (mode) => setViewModes(prev => ({ ...prev, [activeTab]: mode }))
+  const setViewMode = (mode) => {
+    const newModes = { ...viewModes, [activeTab]: mode }
+    setViewModes(newModes)
+    localStorage.setItem('gamerep-view-modes', JSON.stringify(newModes))
+  }
   const [filters, setFilters] = useState({
     sortBy: 'priority',
     sortOrder: 'desc',
