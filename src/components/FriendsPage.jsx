@@ -39,10 +39,17 @@ export default function FriendsPage() {
       return
     }
     
+    if (!allUsers || allUsers.length === 0) {
+      setSearchResults([])
+      return
+    }
+    
     const searchLower = searchQuery.toLowerCase().trim()
     const filtered = allUsers.filter(u => 
-      u.username?.toLowerCase().includes(searchLower) ||
-      u.displayName?.toLowerCase().includes(searchLower)
+      u && (
+        u.username?.toLowerCase().includes(searchLower) ||
+        u.displayName?.toLowerCase().includes(searchLower)
+      )
     ).slice(0, 10)
     
     setSearchResults(filtered)
@@ -64,16 +71,17 @@ export default function FriendsPage() {
   const fetchData = async () => {
     setDataLoading(true)
     try {
+      // Fetch each independently so one failure doesn't break others
       const [followersList, followingList, requestsList, usersList] = await Promise.all([
-        getUserFollowers(user.uid, 'accepted'),
-        getUserFollowing(user.uid),
-        getUserFollowers(user.uid, 'pending'),
-        getAllUsers(100) // Preload users for instant search
+        getUserFollowers(user.uid, 'accepted').catch(() => []),
+        getUserFollowing(user.uid).catch(() => []),
+        getUserFollowers(user.uid, 'pending').catch(() => []),
+        getAllUsers(100).catch(() => [])
       ])
-      setFollowers(followersList)
-      setFollowing(followingList)
-      setRequests(requestsList)
-      setAllUsers(usersList)
+      setFollowers(followersList || [])
+      setFollowing(followingList || [])
+      setRequests(requestsList || [])
+      setAllUsers(usersList || [])
     } catch (err) {
       console.error('Error fetching data:', err)
     } finally {
