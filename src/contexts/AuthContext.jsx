@@ -33,22 +33,17 @@ export function AuthProvider({ children }) {
       // Fetch or create username if user is logged in
       if (user) {
         try {
-          console.log('Fetching profile for user:', user.uid, 'displayName:', user.displayName)
           const profile = await getUserProfile(user.uid)
-          console.log('Got profile:', profile)
           
           // If user doesn't have a username yet, create one
           if (!profile?.username) {
-            console.log('No username found, creating one...')
             const newUsername = await saveUserProfile(user.uid, {
               displayName: user.displayName,
               email: user.email,
               photoURL: user.photoURL,
             })
-            console.log('Created username:', newUsername)
             setUsername(newUsername)
           } else {
-            console.log('Using existing username:', profile.username)
             setUsername(profile.username)
           }
         } catch (err) {
